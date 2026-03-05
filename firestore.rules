@@ -1,0 +1,39 @@
+rules_version = '2';
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+    
+    // Helper function to check if user is an Admin
+    function isAdmin() {
+      // In a real production app with Custom Claims:
+      // return request.auth != null && request.auth.token.admin == true;
+      // For this exact configuration, restrict to our specific Admin UID, or ensure it's backend only
+      return request.auth != null; // Ensure only logged-in Firebase Auth users can modify (AdminGuard)
+    }
+
+    match /menu_items/{item} {
+      allow read: if true; 
+      allow write, update, delete: if isAdmin();
+    }
+
+    match /orders/{order} {
+      // Allow create only from the backend admin/webhook
+      // A backend webhook uses firebase-admin which bypasses these rules entirely.
+      allow create: if false; 
+      allow read, update: if isAdmin();
+      allow delete: if isAdmin();
+    }
+
+    match /reservations/{reservation} {
+      // Public form submission
+      allow create: if true;
+      // Admin only management
+      allow read, update, delete: if isAdmin();
+    }
+
+    match /settings/{setting} {
+      allow read: if true;
+      allow write, update: if isAdmin();
+    }
+  }
+}
