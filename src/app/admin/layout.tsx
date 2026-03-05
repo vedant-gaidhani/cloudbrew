@@ -2,7 +2,7 @@
 
 import AdminGuard from "@/components/AdminGuard";
 import Link from "next/link";
-import { ArrowLeft } from "lucide-react";
+import { ArrowLeft, LayoutDashboard, ShoppingBag, CalendarDays, Coffee } from "lucide-react";
 import { usePathname } from "next/navigation";
 
 export default function AdminLayout({ children }: { children: React.ReactNode }) {
@@ -14,17 +14,17 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
     }
 
     return (
-        <div className="min-h-screen bg-[#F8EDE3] relative z-[9999] isolation-auto">
+        <div className="min-h-screen bg-[#F8EDE3] relative z-[9999] isolation-auto text-cb-espresso">
             <AdminGuard>
-                <div className="flex bg-cb-cream text-cb-espresso min-h-screen font-sans">
-                    {/* Sidebar */}
+                <div className="flex min-h-screen font-sans">
+                    {/* Sidebar (Desktop) */}
                     <aside className="w-64 border-r border-cb-espresso/10 p-6 flex flex-col gap-8 bg-white/50 backdrop-blur-md hidden md:flex">
                         <h1 className="font-serif text-3xl font-bold tracking-tight">Cloudbrew Admin</h1>
                         <nav className="flex flex-col gap-4 flex-1">
                             <Link href="/admin" className="font-bold tracking-widest uppercase text-sm hover:opacity-70 transition-opacity">Dashboard</Link>
-                            <Link href="#" className="font-medium tracking-widest uppercase text-sm opacity-50 hover:opacity-100 transition-opacity">Orders</Link>
-                            <Link href="#" className="font-medium tracking-widest uppercase text-sm opacity-50 hover:opacity-100 transition-opacity">Reservations</Link>
-                            <Link href="#" className="font-medium tracking-widest uppercase text-sm opacity-50 hover:opacity-100 transition-opacity">Menu Items</Link>
+                            <Link href="#orders" className="font-medium tracking-widest uppercase text-sm opacity-50 hover:opacity-100 transition-opacity">Orders</Link>
+                            <Link href="#reservations" className="font-medium tracking-widest uppercase text-sm opacity-50 hover:opacity-100 transition-opacity">Reservations</Link>
+                            <Link href="#menu" className="font-medium tracking-widest uppercase text-sm opacity-50 hover:opacity-100 transition-opacity">Menu Items</Link>
                         </nav>
 
                         <div className="mt-auto border-t border-cb-espresso/10 pt-6">
@@ -36,9 +36,41 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
                     </aside>
 
                     {/* Main Content */}
-                    <main className="flex-1 p-8 md:p-12 overflow-y-auto w-full">
+                    <main className="flex-1 p-6 pb-32 md:p-12 w-full">
                         {children}
                     </main>
+
+                    {/* Mobile Bottom Navigation */}
+                    <nav className="fixed bottom-0 left-0 w-full bg-white/80 backdrop-blur-xl border-t border-cb-espresso/10 p-4 flex justify-around items-center md:hidden z-[100]">
+                        <button
+                            onClick={() => window.scrollTo({ top: 0, behavior: 'smooth' })}
+                            className="flex flex-col items-center gap-1 opacity-100"
+                        >
+                            <LayoutDashboard className="w-5 h-5" />
+                            <span className="text-[9px] font-bold tracking-widest uppercase">Dash</span>
+                        </button>
+                        <button
+                            onClick={() => document.getElementById('orders')?.scrollIntoView({ behavior: 'smooth', block: 'start' })}
+                            className="flex flex-col items-center gap-1 opacity-50 hover:opacity-100 transition-opacity"
+                        >
+                            <ShoppingBag className="w-5 h-5" />
+                            <span className="text-[9px] font-bold tracking-widest uppercase">Orders</span>
+                        </button>
+                        <button
+                            onClick={() => document.getElementById('reservations')?.scrollIntoView({ behavior: 'smooth', block: 'start' })}
+                            className="flex flex-col items-center gap-1 opacity-50 hover:opacity-100 transition-opacity"
+                        >
+                            <CalendarDays className="w-5 h-5" />
+                            <span className="text-[9px] font-bold tracking-widest uppercase">Tables</span>
+                        </button>
+                        <button
+                            onClick={() => document.getElementById('menu')?.scrollIntoView({ behavior: 'smooth', block: 'start' })}
+                            className="flex flex-col items-center gap-1 opacity-50 hover:opacity-100 transition-opacity"
+                        >
+                            <Coffee className="w-5 h-5" />
+                            <span className="text-[9px] font-bold tracking-widest uppercase">Menu</span>
+                        </button>
+                    </nav>
                 </div>
             </AdminGuard>
         </div>

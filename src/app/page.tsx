@@ -102,22 +102,27 @@ export default function Home() {
       }
     });
 
-    // 4. Menu Hover Physics
-    const menuItems = gsap.utils.toArray(".menu-item");
-    const handleEnter = () => gsap.to(document.body, { backgroundColor: "#FFD6BA", duration: 0.5, ease: "power2.out", overwrite: "auto" });
-    const handleLeave = () => gsap.to(document.body, { backgroundColor: "#E8DFF5", duration: 0.5, ease: "power2.out", overwrite: "auto" });
+    // 4. Menu Hover Physics (Desktop Only)
+    let mm = gsap.matchMedia();
 
-    menuItems.forEach((item: any) => {
-      item.addEventListener("mouseenter", handleEnter);
-      item.addEventListener("mouseleave", handleLeave);
+    mm.add("(min-width: 768px)", () => {
+      const menuItems = gsap.utils.toArray(".menu-item");
+      const handleEnter = () => gsap.to(document.body, { backgroundColor: "#FFD6BA", duration: 0.5, ease: "power2.out", overwrite: "auto" });
+      const handleLeave = () => gsap.to(document.body, { backgroundColor: "#E8DFF5", duration: 0.5, ease: "power2.out", overwrite: "auto" });
+
+      menuItems.forEach((item: any) => {
+        item.addEventListener("mouseenter", handleEnter);
+        item.addEventListener("mouseleave", handleLeave);
+      });
+
+      return () => {
+        menuItems.forEach((item: any) => {
+          item.removeEventListener("mouseenter", handleEnter);
+          item.removeEventListener("mouseleave", handleLeave);
+        });
+      };
     });
 
-    return () => {
-      menuItems.forEach((item: any) => {
-        item.removeEventListener("mouseenter", handleEnter);
-        item.removeEventListener("mouseleave", handleLeave);
-      });
-    };
   }, { dependencies: [loading], scope: containerRef });
 
   return (

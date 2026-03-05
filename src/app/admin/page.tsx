@@ -1,14 +1,24 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { collection, doc, updateDoc, onSnapshot } from "firebase/firestore";
+import { collection, doc, updateDoc, onSnapshot, addDoc } from "firebase/firestore";
 import { db, MenuItem } from "@/lib/firebase";
-import { Coffee, Calendar, DollarSign, CheckCircle, XCircle, Settings, Power } from "lucide-react";
+import { Coffee, Calendar, DollarSign, CheckCircle, XCircle, Settings, Power, Plus, X } from "lucide-react";
 import { useStore } from "@/store/useStore";
 
 export default function AdminDashboard() {
     const { menuItems, setMenuItems, reservations, setReservations, orders, setOrders, forceClosed, setForceClosed } = useStore();
     const [loading, setLoading] = useState(true);
+
+    // Modal State
+    const [isAddingItem, setIsAddingItem] = useState(false);
+    const [newItem, setNewItem] = useState({
+        name: "",
+        description: "",
+        price: "",
+        category: "Coffee",
+        image_url: "/assets/images/objects/bean-final.webp"
+    });
 
     useEffect(() => {
         let unsubs: any[] = [];
@@ -105,24 +115,50 @@ export default function AdminDashboard() {
         await updateDoc(doc(db, "settings", "store_status"), { force_closed: !forceClosed }).catch(console.error);
     };
 
+    const handleCreateItem = async (e: React.FormEvent) => {
+        e.preventDefault();
+
+        const itemData = {
+            ...newItem,
+            price: parseFloat(newItem.price),
+            is_available: true,
+            is_popular: false
+        };
+
+        if (!process.env.NEXT_PUBLIC_FIREBASE_API_KEY) {
+            setMenuItems([...menuItems, { id: Date.now().toString(), ...itemData } as MenuItem]);
+            setIsAddingItem(false);
+            setNewItem({ name: "", description: "", price: "", category: "Coffee", image_url: "/assets/images/objects/bean-final.webp" });
+            return;
+        }
+
+        try {
+            await addDoc(collection(db, "menu_items"), itemData);
+            setIsAddingItem(false);
+            setNewItem({ name: "", description: "", price: "", category: "Coffee", image_url: "/assets/images/objects/bean-final.webp" });
+        } catch (error) {
+            console.error("Error adding document: ", error);
+        }
+    };
+
     if (loading) return <div>Loading Cloudbrew Data...</div>;
 
     return (
         <div className="max-w-6xl mx-auto flex flex-col gap-12">
-            <header className="flex justify-between items-end border-b border-cb-espresso/10 pb-6">
+            <header className="flex justify-between items-end border-b border-cb-espresso/10 pb-6 mt-4 md:mt-0">
                 <div>
-                    <h2 className="font-serif text-5xl font-bold mb-2 flex items-center gap-4">Overview </h2>
-                    <p className="font-sans text-sm tracking-widest uppercase opacity-60">Manage your surreal experience</p>
+                    <h2 className="font-serif text-4xl md:text-5xl font-bold mb-2 flex items-center gap-4">Overview </h2>
+                    <p className="font-sans text-xs md:text-sm tracking-widest uppercase opacity-60">Manage your surreal experience</p>
                 </div>
-                <div className="flex items-center gap-4">
+                <div className="flex items-center gap-2 md:gap-4">
                     <button
                         onClick={handleForceCloseToggle}
-                        className={`px-6 py-3 rounded-xl font-sans text-xs tracking-widest uppercase font-bold flex items-center justify-center gap-2 transition-all shadow-xl ${forceClosed ? 'bg-red-500 text-white animate-pulse' : 'bg-green-500 text-white hover:bg-green-600'}`}
+                        className={`px-4 py-2 md:px-6 md:py-3 rounded-xl font-sans text-[10px] md:text-xs tracking-widest uppercase font-bold flex items-center justify-center gap-2 transition-all shadow-xl ${forceClosed ? 'bg-red-500 text-white animate-pulse' : 'bg-green-500 text-white hover:bg-green-600'}`}
                     >
-                        <Power className="w-4 h-4" />
-                        {forceClosed ? "Master Override: CLOSED" : "Master Override: BREWING"}
+                        <Power className="w-4 h-4 hidden md:block" />
+                        {forceClosed ? "CLOSED" : "BREWING"}
                     </button>
-                    <div className="p-3 bg-white/50 rounded-xl border border-cb-espresso/10"><Settings className="w-5 h-5 text-cb-espresso opacity-70" /></div>
+                    <div className="p-3 bg-white/50 rounded-xl border border-cb-espresso/10 hidden md:block"><Settings className="w-5 h-5 text-cb-espresso opacity-70" /></div>
                 </div>
             </header>
 
@@ -136,14 +172,14 @@ export default function AdminDashboard() {
                     </div>
                     <DollarSign className="w-10 h-10 opacity-20" />
                 </div>
-                <div className="glass p-6 rounded-2xl flex items-center justify-between">
+                <div id="reservations" className="glass p-6 rounded-2xl flex items-center justify-between scroll-mt-24">
                     <div>
                         <p className="font-sans text-xs tracking-widest uppercase opacity-60 font-bold mb-1">Upcoming Reservations</p>
                         <p className="font-serif text-4xl font-bold">{reservations.length}</p>
                     </div>
                     <Calendar className="w-10 h-10 opacity-20" />
                 </div>
-                <div className="glass p-6 rounded-2xl flex items-center justify-between">
+                <div id="menu" className="glass p-6 rounded-2xl flex items-center justify-between scroll-mt-24">
                     <div>
                         <p className="font-sans text-xs tracking-widest uppercase opacity-60 font-bold mb-1">Total Menu Items</p>
                         <p className="font-serif text-4xl font-bold">{menuItems.length}</p>
@@ -154,7 +190,7 @@ export default function AdminDashboard() {
 
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-12">
                 {/* Orders Command Center */}
-                <div className="flex flex-col gap-6 lg:col-span-1">
+                <div id="orders" className="flex flex-col gap-6 lg:col-span-1 scroll-mt-24">
                     <h3 className="font-serif text-3xl font-bold border-b border-cb-espresso/10 pb-4">Live Orders</h3>
                     <div className="flex flex-col gap-4">
                         {orders.map(order => (
@@ -205,7 +241,16 @@ export default function AdminDashboard() {
 
                 {/* Menu Management */}
                 <div className="flex flex-col gap-6 lg:col-span-1">
-                    <h3 className="font-serif text-3xl font-bold border-b border-cb-espresso/10 pb-4">Menu Stock</h3>
+                    <div className="flex justify-between items-center border-b border-cb-espresso/10 pb-4">
+                        <h3 className="font-serif text-3xl font-bold">Menu Stock</h3>
+                        <button
+                            onClick={() => setIsAddingItem(true)}
+                            className="bg-cb-espresso text-cb-cream p-2 rounded-full hover:scale-105 transition-transform"
+                        >
+                            <Plus className="w-5 h-5" />
+                        </button>
+                    </div>
+
                     <div className="flex flex-col gap-4">
                         {menuItems.map(item => (
                             <div key={item.id} className="glass p-4 rounded-xl flex items-center justify-between transition-all hover:bg-white/60">
@@ -221,6 +266,97 @@ export default function AdminDashboard() {
                     </div>
                 </div>
             </div>
+
+            {/* Add New Item Modal */}
+            {isAddingItem && (
+                <div className="fixed inset-0 z-[99999] flex items-center justify-center p-4">
+                    {/* Backdrop */}
+                    <div
+                        className="absolute inset-0 bg-cb-espresso/40 backdrop-blur-sm"
+                        onClick={() => setIsAddingItem(false)}
+                    />
+
+                    {/* Modal Content */}
+                    <div className="relative bg-cb-cream w-full max-w-md rounded-2xl shadow-2xl overflow-hidden animate-in fade-in zoom-in-95 duration-200">
+                        <div className="flex justify-between items-center p-6 border-b border-cb-espresso/10">
+                            <h3 className="font-serif text-2xl font-bold text-cb-espresso">New Creation</h3>
+                            <button onClick={() => setIsAddingItem(false)} className="text-cb-espresso/50 hover:text-cb-espresso">
+                                <X className="w-6 h-6" />
+                            </button>
+                        </div>
+
+                        <form onSubmit={handleCreateItem} className="p-6 flex flex-col gap-4">
+                            <div>
+                                <label className="block font-sans text-[10px] tracking-widest uppercase font-bold text-cb-espresso/70 mb-1">Name</label>
+                                <input
+                                    required
+                                    type="text"
+                                    value={newItem.name}
+                                    onChange={(e) => setNewItem({ ...newItem, name: e.target.value })}
+                                    className="w-full bg-white/50 border border-cb-espresso/20 rounded-lg p-3 outline-none focus:border-cb-espresso transition-colors font-serif text-lg"
+                                    placeholder="Ethereal Flat White"
+                                />
+                            </div>
+
+                            <div>
+                                <label className="block font-sans text-[10px] tracking-widest uppercase font-bold text-cb-espresso/70 mb-1">Description</label>
+                                <textarea
+                                    required
+                                    value={newItem.description}
+                                    onChange={(e) => setNewItem({ ...newItem, description: e.target.value })}
+                                    className="w-full bg-white/50 border border-cb-espresso/20 rounded-lg p-3 outline-none focus:border-cb-espresso transition-colors font-sans text-sm resize-none h-24"
+                                    placeholder="A luxurious blend of..."
+                                />
+                            </div>
+
+                            <div className="grid grid-cols-2 gap-4">
+                                <div>
+                                    <label className="block font-sans text-[10px] tracking-widest uppercase font-bold text-cb-espresso/70 mb-1">Price ($)</label>
+                                    <input
+                                        required
+                                        type="number"
+                                        step="0.01"
+                                        value={newItem.price}
+                                        onChange={(e) => setNewItem({ ...newItem, price: e.target.value })}
+                                        className="w-full bg-white/50 border border-cb-espresso/20 rounded-lg p-3 outline-none focus:border-cb-espresso transition-colors font-sans"
+                                        placeholder="8.50"
+                                    />
+                                </div>
+                                <div>
+                                    <label className="block font-sans text-[10px] tracking-widest uppercase font-bold text-cb-espresso/70 mb-1">Category</label>
+                                    <select
+                                        value={newItem.category}
+                                        onChange={(e) => setNewItem({ ...newItem, category: e.target.value })}
+                                        className="w-full bg-white/50 border border-cb-espresso/20 rounded-lg p-3 outline-none focus:border-cb-espresso transition-colors font-sans text-sm"
+                                    >
+                                        <option value="Coffee">Coffee</option>
+                                        <option value="Pastry">Pastry</option>
+                                        <option value="Merchandise">Merchandise</option>
+                                    </select>
+                                </div>
+                            </div>
+
+                            <div>
+                                <label className="block font-sans text-[10px] tracking-widest uppercase font-bold text-cb-espresso/70 mb-1">Image URL</label>
+                                <input
+                                    required
+                                    type="text"
+                                    value={newItem.image_url}
+                                    onChange={(e) => setNewItem({ ...newItem, image_url: e.target.value })}
+                                    className="w-full bg-white/50 border border-cb-espresso/20 rounded-lg p-3 outline-none focus:border-cb-espresso transition-colors font-sans text-sm opacity-60"
+                                />
+                            </div>
+
+                            <button
+                                type="submit"
+                                className="mt-4 w-full bg-cb-espresso text-cb-cream rounded-xl p-4 font-sans text-xs tracking-widest uppercase font-bold hover:scale-[1.02] transition-transform"
+                            >
+                                Craft Item
+                            </button>
+                        </form>
+                    </div>
+                </div>
+            )}
         </div>
     );
 }
