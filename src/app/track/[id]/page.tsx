@@ -104,7 +104,7 @@ export default function TrackOrderPage() {
                         transition={{ duration: 0.8 }}
                     >
                         <p className="font-sans text-xs tracking-widest uppercase text-cb-cream/60 font-bold mb-4">
-                            ORDER NO. {order.id.substring(0, 8)}
+                            ORDER NO. {order.id.startsWith('mock-') ? order.id.toUpperCase() : order.id.substring(0, 8).toUpperCase()}
                         </p>
                         <h1 className="font-serif text-5xl md:text-7xl font-bold tracking-tighter">
                             {order.status === "Ready" ? "It's Ready." : "Track Your Clouds"}
