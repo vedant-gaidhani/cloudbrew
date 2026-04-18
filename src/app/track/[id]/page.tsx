@@ -19,25 +19,27 @@ export default function TrackOrderPage() {
     useEffect(() => {
         if (!id) return;
 
-        // Establish real-time WebSocket connection to the specific order document
+        // If it's a mock order, instantly resolve it without hitting Firebase
+        if (!process.env.NEXT_PUBLIC_FIREBASE_API_KEY || id.startsWith("mock-")) {
+            setOrder({ id, status: "Brewing", customerName: "Valued Guest" });
+            setLoading(false);
+            return;
+        }
+
+        // Establish real-time WebSocket connection to the specific real order document
         const unsubscribe = onSnapshot(doc(db, "orders", id), (docSnap) => {
             if (docSnap.exists()) {
                 setOrder({ id: docSnap.id, ...docSnap.data() });
             } else {
-                // If order not found, fallback to mocked UI if API key is missing (for Vercel demo)
-                if (!process.env.NEXT_PUBLIC_FIREBASE_API_KEY || id.startsWith("mock-")) {
-                    setOrder({ id, status: "Brewing", customerName: "Valued Guest" });
-                } else {
-                    setOrder(null);
-                }
+                setOrder(null);
             }
             setLoading(false);
         }, (error) => {
             console.error("Error listening to order:", error);
+            setOrder(null);
             setLoading(false);
         });
 
-        // Cleanup listener on unmount to prevent memory leaks
         return () => unsubscribe();
     }, [id]);
 
