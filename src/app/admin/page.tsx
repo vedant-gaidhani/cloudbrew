@@ -299,22 +299,24 @@ export default function AdminDashboard() {
                     <h3 className="font-serif text-3xl font-bold border-b border-cb-espresso/10 pb-4">Live Orders</h3>
                     <div className="space-y-4">
                         {orders.filter((o: any) => o.status !== "Completed").map((order: any) => (
-                            <div key={order.id} className="p-4 rounded-xl border border-cb-espresso/10 bg-white shadow-sm flex flex-col gap-4 items-start justify-between">
-                                <div className="w-full break-words">
-                                    <p className="font-sans text-xs tracking-widest uppercase opacity-60 font-bold mb-1">Order #{order.id.substring(0, 6)}</p>
-                                    <p className="font-serif font-bold text-lg">{order.customerName}</p>
-                                    <p className="font-sans text-xs sm:text-sm opacity-80 line-clamp-1">{order.customerEmail}</p>
-                                </div>
-                                <div className="flex items-center justify-between gap-2 w-full pt-2 border-t border-cb-espresso/5">
-                                    <div className="font-sans text-sm font-bold bg-cb-espresso/5 px-3 py-1.5 rounded-full">
+                            <div key={order.id} className="glass p-5 rounded-xl flex flex-col gap-2">
+                                <div className="flex justify-between items-start">
+                                    <p className="font-sans text-[10px] tracking-widest uppercase opacity-60 font-bold">Order #{order.id.substring(0, 6)}</p>
+                                    <span className="px-3 py-1 bg-cb-espresso text-cb-cream rounded-full font-sans text-[10px] tracking-widest uppercase font-bold">
                                         ${order.amountTotal?.toFixed(2) || '0.00'}
-                                    </div>
+                                    </span>
+                                </div>
+                                <div className="flex flex-col mb-2">
+                                    <h4 className="font-serif font-bold text-xl">{order.customerName}</h4>
+                                    <span className="font-sans text-xs opacity-70 mt-1 line-clamp-1">{order.customerEmail}</span>
+                                </div>
+                                <div className="flex w-full mt-1 border-t border-cb-espresso/10 pt-3">
                                     <select
                                         value={order.status}
                                         onChange={(e) => handleUpdateOrderStatus(order.id, e.target.value)}
-                                        className={`px-3 py-1.5 rounded-full font-sans tracking-widest uppercase text-[10px] font-bold outline-none border border-transparent hover:border-cb-espresso/20 transition-all cursor-pointer ${order.status === "Pending" ? "bg-amber-100 text-amber-800" :
-                                            order.status === "Brewing" ? "bg-blue-100 text-blue-800" :
-                                                "bg-green-100 text-green-800"
+                                        className={`w-full text-center appearance-none px-3 py-2 rounded font-sans tracking-widest uppercase text-[10px] font-bold outline-none transition-colors cursor-pointer ${order.status === "Pending" ? "bg-amber-100/50 text-amber-800" :
+                                            order.status === "Brewing" ? "bg-cb-espresso/10 text-cb-espresso" :
+                                                "bg-green-100/50 text-green-700"
                                             }`}
                                     >
                                         <option value="Pending">Received</option>
