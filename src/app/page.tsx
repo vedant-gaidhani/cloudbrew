@@ -149,8 +149,8 @@ export default function Home() {
                 The Menu
               </h2>
 
-              {/* Sticky Category Navigation */}
-              <div className="sticky top-24 z-40 w-full max-w-6xl mx-auto py-4 mb-4 flex gap-4 overflow-x-auto hide-scrollbar snap-x px-4 -mx-4 items-center justify-start md:justify-center">
+              {/* Category Navigation */}
+              <div className="relative z-40 w-full max-w-6xl mx-auto py-4 mb-4 flex gap-4 overflow-x-auto hide-scrollbar snap-x px-4 -mx-4 items-center justify-start md:justify-center">
                 {categories.map((category) => (
                   <button
                     key={category}

@@ -16,7 +16,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
     }
 
     return (
-        <div className="min-h-screen bg-[#F8EDE3] relative z-[9999] isolation-auto text-cb-espresso">
+        <div className="min-h-screen bg-[#F8EDE3] relative text-cb-espresso">
             <AdminGuard>
                 <div className="flex min-h-screen font-sans">
                     {/* Sidebar (Desktop) */}
