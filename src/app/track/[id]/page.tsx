@@ -25,7 +25,7 @@ export default function TrackOrderPage() {
                 setOrder({ id: docSnap.id, ...docSnap.data() });
             } else {
                 // If order not found, fallback to mocked UI if API key is missing (for Vercel demo)
-                if (!process.env.NEXT_PUBLIC_FIREBASE_API_KEY) {
+                if (!process.env.NEXT_PUBLIC_FIREBASE_API_KEY || id.startsWith("mock-")) {
                     setOrder({ id, status: "Brewing", customerName: "Valued Guest" });
                 } else {
                     setOrder(null);
