@@ -1,8 +1,41 @@
+"use client";
+
 import Link from "next/link";
 import TransitionLink from "@/components/TransitionLink";
 import { ArrowUpRight } from "lucide-react";
+import { useState, useRef, useEffect } from "react";
+import { useRouter } from "next/navigation";
 
 export default function Footer() {
+    const [clickCount, setClickCount] = useState(0);
+    const router = useRouter();
+    const timeoutRef = useRef<NodeJS.Timeout | null>(null);
+
+    const handleSecretClick = () => {
+        const newCount = clickCount + 1;
+        setClickCount(newCount);
+
+        if (newCount === 3) {
+            setClickCount(0);
+            if (timeoutRef.current) clearTimeout(timeoutRef.current);
+            router.push('/midnight');
+            return;
+        }
+
+        // Reset counter if they don't click 3 times within 5 seconds
+        if (timeoutRef.current) clearTimeout(timeoutRef.current);
+        timeoutRef.current = setTimeout(() => {
+            setClickCount(0);
+        }, 5000);
+    };
+
+    // Cleanup timeout on unmount
+    useEffect(() => {
+        return () => {
+            if (timeoutRef.current) clearTimeout(timeoutRef.current);
+        };
+    }, []);
+
     return (
         <footer className="w-full bg-cb-espresso text-cb-cream flex flex-col items-center justify-between pt-32 pb-8 px-6 relative z-10 overflow-hidden">
             {/* Top Massive Typography */}
@@ -47,9 +80,13 @@ export default function Footer() {
 
             {/* Bottom Copyright */}
             <div className="w-full max-w-7xl pt-8 border-t border-cb-cream/20 flex flex-col md:flex-row items-center justify-between gap-4">
-                <p className="font-sans text-sm tracking-widest opacity-60 uppercase">
+                <button
+                    onClick={handleSecretClick}
+                    className="font-sans text-sm tracking-widest opacity-60 uppercase hover:opacity-100 transition-opacity focus:outline-none"
+                    title="Copyright 2026"
+                >
                     © 2026 Cloudbrew. All rights reserved.
-                </p>
+                </button>
                 <div className="font-sans text-sm tracking-widest opacity-60 uppercase flex items-center gap-2">
                     <div className="w-2 h-2 rounded-full bg-green-400 animate-pulse"></div>
                     Operating Normally

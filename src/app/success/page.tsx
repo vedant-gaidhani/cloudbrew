@@ -1,16 +1,21 @@
 "use client";
 
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, Suspense } from "react";
 import { useSearchParams } from "next/navigation";
 import { useStore } from "@/store/useStore";
 import TransitionLink from "@/components/TransitionLink";
 import { useGSAP } from "@gsap/react";
 import gsap from "gsap";
 
-export default function SuccessPage() {
+function SuccessContent() {
     const searchParams = useSearchParams();
     const sessionId = searchParams.get("session_id");
-    const { clearCart } = useStore();
+    const orderIdParam = searchParams.get("order_id");
+    const { clearCart, orders } = useStore();
+
+    // Prefer the explicit order_id returned from the API bridge, otherwise fallback to local Zustand cache
+    const latestOrderId = orders.length > 0 ? orders[orders.length - 1].id : null;
+    const trackingId = orderIdParam || latestOrderId || sessionId;
 
     const imageRef = useRef<HTMLImageElement>(null);
     const textElementsRef = useRef<(HTMLElement | null)[]>([]);
@@ -81,12 +86,14 @@ export default function SuccessPage() {
                         className="mt-12"
                     >
                         <TransitionLink
-                            href="/"
+                            href={trackingId ? `/track/${trackingId}` : "/"}
                             className="group relative inline-flex items-center justify-center px-8 py-4 overflow-hidden border border-cb-cream/30 rounded-full font-sans text-xs tracking-[0.2em] font-bold uppercase hover:bg-cb-cream hover:text-cb-espresso transition-colors duration-500"
                         >
-                            <span className="relative z-10 transition-transform duration-500 group-hover:-translate-y-[150%]">Return to Reality</span>
+                            <span className="relative z-10 transition-transform duration-500 group-hover:-translate-y-[150%]">
+                                {trackingId ? "Track Your Clouds" : "Return to Reality"}
+                            </span>
                             <span className="absolute inset-x-0 bottom-0 z-10 flex items-center justify-center transition-transform duration-500 translate-y-[150%] group-hover:translate-y-0 pb-4">
-                                Return to Reality
+                                {trackingId ? "Track Your Clouds" : "Return to Reality"}
                             </span>
                         </TransitionLink>
                     </div>
@@ -118,5 +125,13 @@ export default function SuccessPage() {
             </div>
 
         </div>
+    );
+}
+
+export default function SuccessPage() {
+    return (
+        <Suspense fallback={<div className="min-h-screen bg-cb-espresso flex items-center justify-center text-cb-cream/60 tracking-widest text-xs uppercase font-sans">Verifying Link...</div>}>
+            <SuccessContent />
+        </Suspense>
     );
 }

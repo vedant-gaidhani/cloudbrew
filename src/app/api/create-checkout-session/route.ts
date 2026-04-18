@@ -13,7 +13,7 @@ const stripe = new Stripe(stripeKey, {
 export async function POST(req: Request) {
     try {
         const body = await req.json();
-        const { items } = body;
+        const { items, orderId } = body;
 
         if (!items || items.length === 0) {
             return NextResponse.json(
@@ -26,7 +26,7 @@ export async function POST(req: Request) {
         if (stripeKey === "sk_test_mockKey") {
             // We'll mock the URL so the UI flow doesn't break
             console.warn("Using mock Stripe credentials. Redirecting to mock success.");
-            return NextResponse.json({ url: `${process.env.NEXT_PUBLIC_BASE_URL || 'http://localhost:3000'}/success?session_id=mock_session_id` });
+            return NextResponse.json({ url: `${process.env.NEXT_PUBLIC_BASE_URL || 'http://localhost:3000'}/success?session_id=mock_session_id&order_id=${orderId || 'mock_order_id'}` });
         }
 
         // Map Zustand Cart Items directly to Stripe Line Items
@@ -47,10 +47,11 @@ export async function POST(req: Request) {
             payment_method_types: ["card"],
             line_items: lineItems,
             mode: "payment",
-            success_url: `${process.env.NEXT_PUBLIC_BASE_URL || "http://localhost:3000"}/success?session_id={CHECKOUT_SESSION_ID}`,
+            success_url: `${process.env.NEXT_PUBLIC_BASE_URL || "http://localhost:3000"}/success?session_id={CHECKOUT_SESSION_ID}${orderId ? `&order_id=${orderId}` : ''}`,
             cancel_url: `${process.env.NEXT_PUBLIC_BASE_URL || "http://localhost:3000"}/cancel`,
             metadata: {
-                source: "cloudbrew-frontend"
+                source: "cloudbrew-frontend",
+                orderId: orderId || "unknown"
             }
         });
 

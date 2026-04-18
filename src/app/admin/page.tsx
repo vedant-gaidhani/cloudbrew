@@ -1,10 +1,22 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { collection, doc, updateDoc, onSnapshot, addDoc } from "firebase/firestore";
+import { collection, doc, updateDoc, onSnapshot, addDoc, deleteDoc } from "firebase/firestore";
 import { db, MenuItem } from "@/lib/firebase";
-import { Coffee, Calendar, DollarSign, CheckCircle, XCircle, Settings, Power, Plus, X } from "lucide-react";
+import { Coffee, Calendar, DollarSign, CheckCircle, XCircle, Settings, Power, Plus, X, Trash2, Edit2, TrendingUp } from "lucide-react";
 import { useStore } from "@/store/useStore";
+import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
+import { motion } from 'framer-motion';
+
+const weeklyRevenueData = [
+    { name: 'Mon', revenue: 420 },
+    { name: 'Tue', revenue: 380 },
+    { name: 'Wed', revenue: 510 },
+    { name: 'Thu', revenue: 480 },
+    { name: 'Fri', revenue: 890 },
+    { name: 'Sat', revenue: 1240 },
+    { name: 'Sun', revenue: 1100 },
+];
 
 export default function AdminDashboard() {
     const { menuItems, setMenuItems, reservations, setReservations, orders, setOrders, forceClosed, setForceClosed } = useStore();
@@ -12,6 +24,7 @@ export default function AdminDashboard() {
 
     // Modal State
     const [isAddingItem, setIsAddingItem] = useState(false);
+    const [editingItemId, setEditingItemId] = useState<string | null>(null);
     const [newItem, setNewItem] = useState({
         name: "",
         description: "",
@@ -115,7 +128,7 @@ export default function AdminDashboard() {
         await updateDoc(doc(db, "settings", "store_status"), { force_closed: !forceClosed }).catch(console.error);
     };
 
-    const handleCreateItem = async (e: React.FormEvent) => {
+    const handleSaveItem = async (e: React.FormEvent) => {
         e.preventDefault();
 
         const itemData = {
@@ -126,18 +139,57 @@ export default function AdminDashboard() {
         };
 
         if (!process.env.NEXT_PUBLIC_FIREBASE_API_KEY) {
-            setMenuItems([...menuItems, { id: Date.now().toString(), ...itemData } as MenuItem]);
+            if (editingItemId) {
+                setMenuItems(menuItems.map(item => item.id === editingItemId ? { id: editingItemId, ...itemData } as MenuItem : item));
+            } else {
+                setMenuItems([...menuItems, { id: Date.now().toString(), ...itemData } as MenuItem]);
+            }
             setIsAddingItem(false);
+            setEditingItemId(null);
             setNewItem({ name: "", description: "", price: "", category: "Coffee", image_url: "/assets/images/objects/bean-final.webp" });
             return;
         }
 
         try {
-            await addDoc(collection(db, "menu_items"), itemData);
+            if (editingItemId) {
+                await updateDoc(doc(db, "menu_items", editingItemId), itemData);
+            } else {
+                await addDoc(collection(db, "menu_items"), itemData);
+            }
             setIsAddingItem(false);
+            setEditingItemId(null);
             setNewItem({ name: "", description: "", price: "", category: "Coffee", image_url: "/assets/images/objects/bean-final.webp" });
         } catch (error) {
-            console.error("Error adding document: ", error);
+            console.error("Error saving document: ", error);
+        }
+    };
+
+    const handleDeleteItem = async (id: string, name: string) => {
+        if (!window.confirm(`Are you sure you want to delete ${name}?`)) return;
+
+        if (!process.env.NEXT_PUBLIC_FIREBASE_API_KEY) {
+            setMenuItems(menuItems.filter(item => item.id !== id));
+            return;
+        }
+
+        try {
+            await deleteDoc(doc(db, "menu_items", id));
+        } catch (error) {
+            console.error("Error deleting item:", error);
+            alert("Failed to delete item.");
+        }
+    };
+
+    const handleUpdateOrderStatus = async (id: string, newStatus: string) => {
+        if (!process.env.NEXT_PUBLIC_FIREBASE_API_KEY) {
+            setOrders(orders.map(order => order.id === id ? { ...order, status: newStatus } : order));
+            return;
+        }
+        try {
+            await updateDoc(doc(db, "orders", id), { status: newStatus });
+        } catch (error) {
+            console.error("Error updating order status:", error);
+            alert("Failed to update status.");
         }
     };
 
@@ -164,27 +216,80 @@ export default function AdminDashboard() {
 
             {/* Quick Stats Grid */}
             <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                <div className="glass p-6 rounded-2xl flex items-center justify-between shadow-sm">
-                    <div>
+                <motion.div whileHover={{ y: -5 }} className="glass p-6 rounded-2xl flex items-center justify-between shadow-sm border border-cb-espresso/10 relative overflow-hidden group hover:shadow-xl transition-all">
+                    <div className="absolute inset-0 bg-gradient-to-br from-cb-espresso/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity" />
+                    <div className="relative z-10">
                         <p className="font-sans text-xs tracking-widest uppercase opacity-60 font-bold mb-1">To-Do Orders</p>
                         <p className="font-serif text-4xl font-bold">{orders.filter((o: any) => o.status !== "Completed").length}</p>
-
                     </div>
-                    <DollarSign className="w-10 h-10 opacity-20" />
-                </div>
-                <div id="reservations" className="glass p-6 rounded-2xl flex items-center justify-between scroll-mt-24">
-                    <div>
+                    <DollarSign className="w-10 h-10 opacity-20 relative z-10" />
+                </motion.div>
+                <motion.div whileHover={{ y: -5 }} id="reservations" className="glass p-6 rounded-2xl flex items-center justify-between shadow-sm border border-cb-espresso/10 relative overflow-hidden group hover:shadow-xl transition-all scroll-mt-24">
+                    <div className="absolute inset-0 bg-gradient-to-br from-cb-espresso/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity" />
+                    <div className="relative z-10">
                         <p className="font-sans text-xs tracking-widest uppercase opacity-60 font-bold mb-1">Upcoming Reservations</p>
                         <p className="font-serif text-4xl font-bold">{reservations.length}</p>
                     </div>
-                    <Calendar className="w-10 h-10 opacity-20" />
-                </div>
-                <div id="menu" className="glass p-6 rounded-2xl flex items-center justify-between scroll-mt-24">
-                    <div>
+                    <Calendar className="w-10 h-10 opacity-20 relative z-10" />
+                </motion.div>
+                <motion.div whileHover={{ y: -5 }} id="menu" className="glass p-6 rounded-2xl flex items-center justify-between shadow-sm border border-cb-espresso/10 relative overflow-hidden group hover:shadow-xl transition-all scroll-mt-24">
+                    <div className="absolute inset-0 bg-gradient-to-br from-cb-espresso/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity" />
+                    <div className="relative z-10">
                         <p className="font-sans text-xs tracking-widest uppercase opacity-60 font-bold mb-1">Total Menu Items</p>
                         <p className="font-serif text-4xl font-bold">{menuItems.length}</p>
                     </div>
-                    <Coffee className="w-10 h-10 opacity-20" />
+                    <Coffee className="w-10 h-10 opacity-20 relative z-10" />
+                </motion.div>
+            </div>
+
+            {/* Business Intelligence Graph */}
+            <div className="glass p-6 md:p-8 rounded-2xl border border-cb-espresso/10 shadow-sm w-full">
+                <div className="flex justify-between items-end mb-8 border-b border-cb-espresso/10 pb-4">
+                    <div>
+                        <h3 className="font-serif text-3xl font-bold flex items-center gap-3"><TrendingUp className="w-6 h-6 opacity-70" /> Revenue Stream</h3>
+                        <p className="font-sans text-xs tracking-widest uppercase opacity-60 font-bold mt-1">Past 7 Days (Mocked)</p>
+                    </div>
+                    <h4 className="font-serif font-bold text-4xl text-green-700/80">$5,020</h4>
+                </div>
+
+                <div className="h-[300px] w-full">
+                    <ResponsiveContainer width="100%" height="100%">
+                        <AreaChart data={weeklyRevenueData} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
+                            <defs>
+                                <linearGradient id="colorRevenue" x1="0" y1="0" x2="0" y2="1">
+                                    <stop offset="5%" stopColor="#382B23" stopOpacity={0.3} />
+                                    <stop offset="95%" stopColor="#382B23" stopOpacity={0} />
+                                </linearGradient>
+                            </defs>
+                            <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="rgba(56, 43, 35, 0.1)" />
+                            <XAxis
+                                dataKey="name"
+                                axisLine={false}
+                                tickLine={false}
+                                tick={{ fill: 'rgba(56, 43, 35, 0.6)', fontSize: 12, fontFamily: 'serif' }}
+                                dy={10}
+                            />
+                            <YAxis
+                                axisLine={false}
+                                tickLine={false}
+                                tick={{ fill: 'rgba(56, 43, 35, 0.6)', fontSize: 12, fontFamily: 'serif' }}
+                                tickFormatter={(value) => `$${value}`}
+                            />
+                            <Tooltip
+                                contentStyle={{ backgroundColor: '#FCF8F3', borderRadius: '12px', border: '1px solid rgba(56, 43, 35, 0.1)', boxShadow: '0 10px 25px -5px rgba(0, 0, 0, 0.1)' }}
+                                itemStyle={{ color: '#382B23', fontWeight: 'bold' }}
+                                labelStyle={{ color: 'rgba(56, 43, 35, 0.6)' }}
+                            />
+                            <Area
+                                type="monotone"
+                                dataKey="revenue"
+                                stroke="#382B23"
+                                strokeWidth={3}
+                                fillOpacity={1}
+                                fill="url(#colorRevenue)"
+                            />
+                        </AreaChart>
+                    </ResponsiveContainer>
                 </div>
             </div>
 
@@ -192,23 +297,32 @@ export default function AdminDashboard() {
                 {/* Orders Command Center */}
                 <div id="orders" className="flex flex-col gap-6 lg:col-span-1 scroll-mt-24">
                     <h3 className="font-serif text-3xl font-bold border-b border-cb-espresso/10 pb-4">Live Orders</h3>
-                    <div className="flex flex-col gap-4">
-                        {orders.map(order => (
-                            <div key={order.id} className={`glass p-5 rounded-xl flex flex-col gap-3 transition-colors ${order.status === "Completed" ? "opacity-50 grayscale" : "border-cb-espresso/20"}`}>
-                                <div className="flex justify-between items-start">
-                                    <h4 className="font-serif font-bold text-xl">{order.customerName}</h4>
-                                    <span className="font-sans font-bold text-cb-espresso/70">${Number(order.amountTotal).toFixed(2)}</span>
+                    <div className="space-y-4">
+                        {orders.filter((o: any) => o.status !== "Completed").map((order: any) => (
+                            <div key={order.id} className="p-4 rounded-xl border border-cb-espresso/10 bg-white shadow-sm flex flex-col md:flex-row gap-4 items-start md:items-center justify-between">
+                                <div>
+                                    <p className="font-sans text-xs tracking-widest uppercase opacity-60 font-bold mb-1">Order #{order.id.substring(0, 6)}</p>
+                                    <p className="font-serif font-bold text-lg">{order.customerName}</p>
+                                    <p className="font-sans text-sm opacity-80">{order.customerEmail}</p>
                                 </div>
-                                <select
-                                    value={order.status}
-                                    onChange={(e) => updateOrderStatus(order.id, e.target.value)}
-                                    className="bg-cb-cream/50 text-cb-espresso font-sans text-xs tracking-widest uppercase font-bold p-2 rounded outline-none border border-cb-espresso/10 cursor-pointer"
-                                >
-                                    <option value="Pending">Pending</option>
-                                    <option value="Preparing">Preparing...</option>
-                                    <option value="Ready">Ready</option>
-                                    <option value="Completed">Completed</option>
-                                </select>
+                                <div className="flex items-center gap-4 w-full md:w-auto">
+                                    <div className="font-sans text-sm font-bold bg-cb-espresso/5 px-4 py-2 rounded-full">
+                                        ${order.amountTotal?.toFixed(2) || '0.00'}
+                                    </div>
+                                    <select
+                                        value={order.status}
+                                        onChange={(e) => handleUpdateOrderStatus(order.id, e.target.value)}
+                                        className={`px-4 py-2 rounded-full font-sans tracking-widest uppercase text-xs font-bold outline-none border border-transparent hover:border-cb-espresso/20 transition-all cursor-pointer ${order.status === "Pending" ? "bg-amber-100 text-amber-800" :
+                                            order.status === "Brewing" ? "bg-blue-100 text-blue-800" :
+                                                "bg-green-100 text-green-800"
+                                            }`}
+                                    >
+                                        <option value="Pending">Received</option>
+                                        <option value="Brewing">Brewing</option>
+                                        <option value="Ready">Ready</option>
+                                        <option value="Completed">Complete</option>
+                                    </select>
+                                </div>
                             </div>
                         ))}
                     </div>
@@ -244,7 +358,11 @@ export default function AdminDashboard() {
                     <div className="flex justify-between items-center border-b border-cb-espresso/10 pb-4">
                         <h3 className="font-serif text-3xl font-bold">Menu Stock</h3>
                         <button
-                            onClick={() => setIsAddingItem(true)}
+                            onClick={() => {
+                                setEditingItemId(null);
+                                setNewItem({ name: "", description: "", price: "", category: "Coffee", image_url: "/assets/images/objects/bean-final.webp" });
+                                setIsAddingItem(true);
+                            }}
                             className="bg-cb-espresso text-cb-cream p-2 rounded-full hover:scale-105 transition-transform"
                         >
                             <Plus className="w-5 h-5" />
@@ -254,13 +372,40 @@ export default function AdminDashboard() {
                     <div className="flex flex-col gap-4">
                         {menuItems.map(item => (
                             <div key={item.id} className="glass p-4 rounded-xl flex items-center justify-between transition-all hover:bg-white/60">
-                                <span className="font-serif font-bold text-lg">{item.name}</span>
-                                <button
-                                    onClick={() => toggleAvailability(item.id, item.is_available)}
-                                    className={`flex items-center gap-2 px-3 py-1.5 rounded-full font-sans text-[10px] tracking-widest uppercase font-bold transition-colors ${item.is_available ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'}`}
-                                >
-                                    {item.is_available ? <><CheckCircle className="w-3 h-3" /> Instock</> : <><XCircle className="w-3 h-3" /> Sold Out</>}
-                                </button>
+                                <div className="flex flex-col">
+                                    <span className="font-serif font-bold text-lg">{item.name}</span>
+                                    <span className="font-sans text-[10px] tracking-widest uppercase opacity-50">{item.category}</span>
+                                </div>
+                                <div className="flex items-center gap-2">
+                                    <button
+                                        onClick={() => toggleAvailability(item.id, item.is_available)}
+                                        className={`flex items-center gap-2 px-3 py-1.5 rounded-full font-sans text-[10px] tracking-widest uppercase font-bold transition-colors ${item.is_available ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'}`}
+                                    >
+                                        {item.is_available ? <><CheckCircle className="w-3 h-3 hidden sm:block" /> Instock</> : <><XCircle className="w-3 h-3 hidden sm:block" /> Sold Out</>}
+                                    </button>
+                                    <button
+                                        onClick={() => {
+                                            setEditingItemId(item.id);
+                                            setNewItem({
+                                                name: item.name,
+                                                description: item.description,
+                                                price: item.price.toString(),
+                                                category: item.category || "Coffee",
+                                                image_url: item.image_url || ""
+                                            });
+                                            setIsAddingItem(true);
+                                        }}
+                                        className="p-1.5 bg-blue-100 text-blue-700 rounded-lg hover:bg-blue-200 transition-colors"
+                                    >
+                                        <Edit2 className="w-4 h-4" />
+                                    </button>
+                                    <button
+                                        onClick={() => handleDeleteItem(item.id, item.name)}
+                                        className="p-1.5 bg-red-100 text-red-700 rounded-lg hover:bg-red-200 transition-colors"
+                                    >
+                                        <Trash2 className="w-4 h-4" />
+                                    </button>
+                                </div>
                             </div>
                         ))}
                     </div>
@@ -279,13 +424,18 @@ export default function AdminDashboard() {
                     {/* Modal Content */}
                     <div className="relative bg-cb-cream w-full max-w-md rounded-2xl shadow-2xl overflow-hidden animate-in fade-in zoom-in-95 duration-200">
                         <div className="flex justify-between items-center p-6 border-b border-cb-espresso/10">
-                            <h3 className="font-serif text-2xl font-bold text-cb-espresso">New Creation</h3>
-                            <button onClick={() => setIsAddingItem(false)} className="text-cb-espresso/50 hover:text-cb-espresso">
+                            <h3 className="font-serif text-2xl font-bold text-cb-espresso">
+                                {editingItemId ? "Edit Item" : "New Creation"}
+                            </h3>
+                            <button onClick={() => {
+                                setIsAddingItem(false);
+                                setEditingItemId(null);
+                            }} className="text-cb-espresso/50 hover:text-cb-espresso">
                                 <X className="w-6 h-6" />
                             </button>
                         </div>
 
-                        <form onSubmit={handleCreateItem} className="p-6 flex flex-col gap-4">
+                        <form onSubmit={handleSaveItem} className="p-6 flex flex-col gap-4">
                             <div>
                                 <label className="block font-sans text-[10px] tracking-widest uppercase font-bold text-cb-espresso/70 mb-1">Name</label>
                                 <input
@@ -324,15 +474,20 @@ export default function AdminDashboard() {
                                 </div>
                                 <div>
                                     <label className="block font-sans text-[10px] tracking-widest uppercase font-bold text-cb-espresso/70 mb-1">Category</label>
-                                    <select
+                                    <input
+                                        required
+                                        type="text"
+                                        list="category-suggestions"
                                         value={newItem.category}
                                         onChange={(e) => setNewItem({ ...newItem, category: e.target.value })}
                                         className="w-full bg-white/50 border border-cb-espresso/20 rounded-lg p-3 outline-none focus:border-cb-espresso transition-colors font-sans text-sm"
-                                    >
-                                        <option value="Coffee">Coffee</option>
-                                        <option value="Pastry">Pastry</option>
-                                        <option value="Merchandise">Merchandise</option>
-                                    </select>
+                                        placeholder="e.g. Coffee, Pastry, Cold Brew"
+                                    />
+                                    <datalist id="category-suggestions">
+                                        {Array.from(new Set(menuItems.map(item => item.category))).map(cat => (
+                                            <option key={cat} value={cat} />
+                                        ))}
+                                    </datalist>
                                 </div>
                             </div>
 
@@ -351,7 +506,7 @@ export default function AdminDashboard() {
                                 type="submit"
                                 className="mt-4 w-full bg-cb-espresso text-cb-cream rounded-xl p-4 font-sans text-xs tracking-widest uppercase font-bold hover:scale-[1.02] transition-transform"
                             >
-                                Craft Item
+                                {editingItemId ? "Save Changes" : "Craft Item"}
                             </button>
                         </form>
                     </div>

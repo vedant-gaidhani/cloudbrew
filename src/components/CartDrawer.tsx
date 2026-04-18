@@ -4,12 +4,19 @@ import { useStore } from "@/store/useStore";
 import { useEffect, useState } from "react";
 import { X, Plus, Minus, ShoppingBag } from "lucide-react";
 import { getAuth } from "firebase/auth";
-import { app } from "@/lib/firebase";
+import { app, db } from "@/lib/firebase";
+import { collection, addDoc, serverTimestamp } from "firebase/firestore";
 
 export default function CartDrawer() {
-    const { isCartOpen, toggleCart, cart, updateQuantity, removeFromCart, getCartTotal, forceClosed, setOrders, orders, clearCart } = useStore();
+    const { isCartOpen, toggleCart, cart, updateQuantity, removeFromCart, getCartTotal, forceClosed, setOrders, orders, clearCart, menuItems, addToCart } = useStore();
     const [isClient, setIsClient] = useState(false);
     const [isCheckoutLoading, setIsCheckoutLoading] = useState(false);
+
+    // Compute trending items: prefer `is_popular`, fallback to first 3 items, excluding active cart nodes
+    const trendingItems = menuItems.filter(item => item.is_popular && !cart.some(c => c.id === item.id)).slice(0, 3);
+    const displayTrending = trendingItems.length > 0
+        ? trendingItems
+        : menuItems.filter(item => !cart.some(c => c.id === item.id)).slice(0, 3);
 
     // Avoid hydration mismatch
     useEffect(() => {
@@ -92,6 +99,34 @@ export default function CartDrawer() {
                             </div>
                         ))
                     )}
+
+                    {/* Trending Now Section */}
+                    {displayTrending.length > 0 && (
+                        <div className="mt-8 pt-6 border-t border-cb-espresso/10">
+                            <h3 className="font-serif text-lg font-bold text-cb-espresso mb-4">Trending Now</h3>
+                            <div className="flex flex-col gap-3">
+                                {displayTrending.map(item => (
+                                    <div key={item.id} className="flex gap-3 items-center bg-white/30 p-3 rounded-xl border border-cb-espresso/5 hover:bg-white/50 transition-colors">
+                                        {item.image_url && (
+                                            <div className="w-12 h-12 relative bg-cb-espresso/5 rounded-lg overflow-hidden flex-shrink-0">
+                                                <img src={item.image_url} alt={item.name} className="object-cover w-full h-full mix-blend-multiply" />
+                                            </div>
+                                        )}
+                                        <div className="flex-1">
+                                            <h4 className="font-serif font-bold text-sm text-cb-espresso truncate">{item.name}</h4>
+                                            <p className="font-sans text-xs font-medium text-cb-espresso/70">${item.price.toFixed(2)}</p>
+                                        </div>
+                                        <button
+                                            onClick={() => addToCart(item)}
+                                            className="w-8 h-8 flex items-center justify-center bg-cb-espresso text-cb-cream rounded-full hover:scale-105 active:scale-95 transition-transform shrink-0"
+                                        >
+                                            <Plus className="w-4 h-4" />
+                                        </button>
+                                    </div>
+                                ))}
+                            </div>
+                        </div>
+                    )}
                 </div>
 
                 {/* Footer / Checkout */}
@@ -108,18 +143,39 @@ export default function CartDrawer() {
                                 try {
                                     setIsCheckoutLoading(true);
 
-                                    // Mock Flow without real Stripe/Firebase
-                                    if (!process.env.NEXT_PUBLIC_FIREBASE_API_KEY && !process.env.STRIPE_SECRET_KEY) {
-                                        setOrders([...orders, { id: "mock-ord-" + Math.random().toString(36).substring(7), customerName: "Test Customer", customerEmail: "test@cloudbrew.com", amountTotal: getCartTotal(), status: "Pending" }]);
+                                    // 1. First, create the "Received" order document locally in Firestore
+                                    let activeOrderId = "mock-ord-" + Math.random().toString(36).substring(7);
+
+                                    // If we are actually connected to a live Firebase config
+                                    if (process.env.NEXT_PUBLIC_FIREBASE_API_KEY) {
+                                        try {
+                                            const docRef = await addDoc(collection(db, "orders"), {
+                                                customerName: "Valued Guest",
+                                                customerEmail: "guest@cloudbrew.com",
+                                                amountTotal: getCartTotal(),
+                                                status: "Received",
+                                                createdAt: serverTimestamp(),
+                                                items: cart.map(i => ({ name: i.name, quantity: i.quantity, price: i.price }))
+                                            });
+                                            activeOrderId = docRef.id;
+                                        } catch (e) {
+                                            console.error("Failed to pre-create Firebase Order:", e);
+                                        }
+                                    }
+
+                                    // 2. Mock Flow immediately if no Stripe Key
+                                    if (!process.env.STRIPE_SECRET_KEY && !process.env.NEXT_PUBLIC_FIREBASE_API_KEY) {
+                                        setOrders([...orders, { id: activeOrderId, customerName: "Test Customer", customerEmail: "test@cloudbrew.com", amountTotal: getCartTotal(), status: "Received" }]);
                                         clearCart();
-                                        window.location.href = '/success';
+                                        window.location.href = `/success?order_id=${activeOrderId}`;
                                         return;
                                     }
 
+                                    // 3. Shoot to the internal API route with the ID
                                     const response = await fetch('/api/create-checkout-session', {
                                         method: 'POST',
                                         headers: { 'Content-Type': 'application/json' },
-                                        body: JSON.stringify({ items: cart }),
+                                        body: JSON.stringify({ items: cart, orderId: activeOrderId }),
                                     });
 
                                     const data = await response.json();
