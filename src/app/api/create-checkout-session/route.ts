@@ -22,11 +22,13 @@ export async function POST(req: Request) {
             );
         }
 
+        const origin = req.headers.get("origin") || process.env.NEXT_PUBLIC_BASE_URL || "http://localhost:3000";
+
         // Mock Stripe Checkout if no real key is present
         if (stripeKey === "sk_test_mockKey") {
             // We'll mock the URL so the UI flow doesn't break
             console.warn("Using mock Stripe credentials. Redirecting to mock success.");
-            return NextResponse.json({ url: `${process.env.NEXT_PUBLIC_BASE_URL || 'http://localhost:3000'}/success?session_id=mock_session_id&order_id=${orderId || 'mock_order_id'}` });
+            return NextResponse.json({ url: `${origin}/success?session_id=mock_session_id&order_id=${orderId || 'mock_order_id'}` });
         }
 
         // Map Zustand Cart Items directly to Stripe Line Items
@@ -36,7 +38,7 @@ export async function POST(req: Request) {
                 product_data: {
                     name: item.name,
                     description: item.description || `Cloudbrew ${item.name}`,
-                    images: item.image_url ? [`${process.env.NEXT_PUBLIC_BASE_URL || 'http://localhost:3000'}${item.image_url}`] : [],
+                    images: item.image_url ? [item.image_url.startsWith('http') ? item.image_url : `${origin}${item.image_url}`] : [],
                 },
                 unit_amount: item.price * 100, // Stripe expects cents
             },
@@ -47,8 +49,8 @@ export async function POST(req: Request) {
             payment_method_types: ["card"],
             line_items: lineItems,
             mode: "payment",
-            success_url: `${process.env.NEXT_PUBLIC_BASE_URL || "http://localhost:3000"}/success?session_id={CHECKOUT_SESSION_ID}${orderId ? `&order_id=${orderId}` : ''}`,
-            cancel_url: `${process.env.NEXT_PUBLIC_BASE_URL || "http://localhost:3000"}/cancel`,
+            success_url: `${origin}/success?session_id={CHECKOUT_SESSION_ID}${orderId ? `&order_id=${orderId}` : ''}`,
+            cancel_url: `${origin}/cancel`,
             metadata: {
                 source: "cloudbrew-frontend",
                 orderId: orderId || "unknown"
