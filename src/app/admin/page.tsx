@@ -224,7 +224,7 @@ export default function AdminDashboard() {
                     </div>
                     <DollarSign className="w-10 h-10 opacity-20 relative z-10" />
                 </motion.div>
-                <motion.div whileHover={{ y: -5 }} id="reservations" className="glass p-6 rounded-2xl flex items-center justify-between shadow-sm border border-cb-espresso/10 relative overflow-hidden group hover:shadow-xl transition-all scroll-mt-24">
+                <motion.div whileHover={{ y: -5 }} className="glass p-6 rounded-2xl flex items-center justify-between shadow-sm border border-cb-espresso/10 relative overflow-hidden group hover:shadow-xl transition-all scroll-mt-24">
                     <div className="absolute inset-0 bg-gradient-to-br from-cb-espresso/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity" />
                     <div className="relative z-10">
                         <p className="font-sans text-xs tracking-widest uppercase opacity-60 font-bold mb-1">Upcoming Reservations</p>
@@ -232,7 +232,7 @@ export default function AdminDashboard() {
                     </div>
                     <Calendar className="w-10 h-10 opacity-20 relative z-10" />
                 </motion.div>
-                <motion.div whileHover={{ y: -5 }} id="menu" className="glass p-6 rounded-2xl flex items-center justify-between shadow-sm border border-cb-espresso/10 relative overflow-hidden group hover:shadow-xl transition-all scroll-mt-24">
+                <motion.div whileHover={{ y: -5 }} className="glass p-6 rounded-2xl flex items-center justify-between shadow-sm border border-cb-espresso/10 relative overflow-hidden group hover:shadow-xl transition-all scroll-mt-24">
                     <div className="absolute inset-0 bg-gradient-to-br from-cb-espresso/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity" />
                     <div className="relative z-10">
                         <p className="font-sans text-xs tracking-widest uppercase opacity-60 font-bold mb-1">Total Menu Items</p>
@@ -331,7 +331,7 @@ export default function AdminDashboard() {
                 </div>
 
                 {/* Reservations Feed */}
-                <div className="flex flex-col gap-6 lg:col-span-1">
+                <div id="reservations" className="flex flex-col gap-6 lg:col-span-1 scroll-mt-24">
                     <h3 className="font-serif text-3xl font-bold border-b border-cb-espresso/10 pb-4">Upcoming Tables</h3>
                     <div className="flex flex-col gap-4">
                         {reservations.map(res => (
@@ -356,7 +356,7 @@ export default function AdminDashboard() {
                 </div>
 
                 {/* Menu Management */}
-                <div className="flex flex-col gap-6 lg:col-span-1">
+                <div id="menu" className="flex flex-col gap-6 lg:col-span-1 scroll-mt-24">
                     <div className="flex justify-between items-center border-b border-cb-espresso/10 pb-4">
                         <h3 className="font-serif text-3xl font-bold">Menu Stock</h3>
                         <button
